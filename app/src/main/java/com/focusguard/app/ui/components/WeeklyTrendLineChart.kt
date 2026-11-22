@@ -33,6 +33,7 @@ fun WeeklyTrendLineChart(
     )
 
     val primaryColor = MaterialTheme.colorScheme.primary
+    val surfaceColor = MaterialTheme.colorScheme.surface
     val maxVal = (points.maxOrNull() ?: 1f).coerceAtLeast(60f) * 1.15f
     val minVal = (points.minOrNull() ?: 0f) * 0.85f
 
@@ -92,7 +93,7 @@ fun WeeklyTrendLineChart(
         // Draw data points circles
         coordinates.forEach { point ->
             drawCircle(
-                color = MaterialTheme.colorScheme.surface,
+                color = surfaceColor,
                 radius = 5.dp.toPx(),
                 center = point
             )

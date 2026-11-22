@@ -60,6 +60,9 @@ import com.focusguard.app.data.model.FocusSoundType
 import com.focusguard.app.data.model.FocusTheme
 import com.focusguard.app.ui.theme.ProgressAmber
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FocusScreen(
     onNavigateToPremium: () -> Unit,
@@ -179,6 +182,8 @@ fun FocusScreen(
                 label = "TimerRingAnim"
             )
 
+            val trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+
             Canvas(modifier = Modifier.size(240.dp)) {
                 val strokePx = 14.dp.toPx()
                 val arcSize = size.width - strokePx
@@ -186,7 +191,7 @@ fun FocusScreen(
 
                 // Track
                 drawArc(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    color = trackColor,
                     startAngle = -90f,
                     sweepAngle = 360f,
                     useCenter = false,

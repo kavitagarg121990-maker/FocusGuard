@@ -68,6 +68,9 @@ import com.focusguard.app.ui.theme.ProgressAmber
 import com.focusguard.app.ui.theme.ProgressGreen
 import com.focusguard.app.ui.theme.ProgressRed
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BlockScreen(
     onNavigateToPremium: () -> Unit,

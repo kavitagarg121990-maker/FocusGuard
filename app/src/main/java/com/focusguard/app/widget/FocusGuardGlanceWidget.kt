@@ -36,6 +36,19 @@ import com.focusguard.app.service.AppBlockerForegroundService
 
 class FocusGuardGlanceWidget : GlanceAppWidget() {
 
+    private val primaryColorProvider = ColorProvider(
+        day = androidx.compose.ui.graphics.Color(0xFF83D5C5),
+        night = androidx.compose.ui.graphics.Color(0xFF83D5C5)
+    )
+    private val whiteColorProvider = ColorProvider(
+        day = androidx.compose.ui.graphics.Color.White,
+        night = androidx.compose.ui.graphics.Color.White
+    )
+    private val subtextColorProvider = ColorProvider(
+        day = androidx.compose.ui.graphics.Color(0xFFA0B3B0),
+        night = androidx.compose.ui.graphics.Color(0xFFA0B3B0)
+    )
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             GlanceTheme {
@@ -55,7 +68,7 @@ class FocusGuardGlanceWidget : GlanceAppWidget() {
                         Text(
                             text = "🛡️ FocusGuard",
                             style = TextStyle(
-                                color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF83D5C5)),
+                                color = primaryColorProvider,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -67,7 +80,7 @@ class FocusGuardGlanceWidget : GlanceAppWidget() {
                     Text(
                         text = "3h 42m",
                         style = TextStyle(
-                            color = ColorProvider(androidx.compose.ui.graphics.Color.White),
+                            color = whiteColorProvider,
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -75,7 +88,7 @@ class FocusGuardGlanceWidget : GlanceAppWidget() {
                     Text(
                         text = "of 5h daily limit",
                         style = TextStyle(
-                            color = ColorProvider(androidx.compose.ui.graphics.Color(0xFFA0B3B0)),
+                            color = subtextColorProvider,
                             fontSize = 11.sp
                         )
                     )
@@ -94,7 +107,7 @@ class FocusGuardGlanceWidget : GlanceAppWidget() {
                         Text(
                             text = "Open FocusGuard",
                             style = TextStyle(
-                                color = ColorProvider(androidx.compose.ui.graphics.Color.White),
+                                color = whiteColorProvider,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
                             )

@@ -48,6 +48,9 @@ import com.focusguard.app.ui.components.WeeklyTrendLineChart
 import com.focusguard.app.ui.theme.ProgressAmber
 import com.focusguard.app.ui.theme.ProgressGreen
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
     onNavigateToPremium: () -> Unit,
