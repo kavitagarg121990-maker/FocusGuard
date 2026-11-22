@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Center Shield -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 L34,36 C34,56 42,72 54,80 C66,72 74,56 74,36 Z" />
+    <!-- Inner Checkmark / Focus dot -->
+    <path
+        android:fillColor="#1D6A5D"
+        android:pathData="M48,54 L52,58 L62,48 L65,51 L52,64 L45,57 Z" />
+</vector>

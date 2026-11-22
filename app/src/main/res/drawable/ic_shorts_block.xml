@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+    <!-- Smartphone Outline -->
+    <path
+        android:fillColor="#E0E6E4"
+        android:pathData="M32,12 C28,12 24,16 24,20 L24,76 C24,80 28,84 32,84 L64,84 C68,84 72,80 72,76 L72,20 C72,16 68,12 64,12 Z" />
+    <!-- Screen area -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M28,20 L68,20 L68,76 L28,76 Z" />
+    <!-- Play triangle -->
+    <path
+        android:fillColor="#E53935"
+        android:pathData="M44,38 L58,48 L44,58 Z" />
+    <!-- Block circle with diagonal slash -->
+    <path
+        android:fillColor="#D32F2F"
+        android:pathData="M48,28 C36.96,28 28,36.96 28,48 C28,59.04 36.96,68 48,68 C59.04,68 68,59.04 68,48 C68,36.96 59.04,28 48,28 Z M32,48 C32,39.16 39.16,32 48,32 C52.08,32 55.8,33.52 58.64,36.04 L36.04,58.64 C33.52,55.8 32,52.08 32,48 Z M48,64 C43.92,64 40.2,62.48 37.36,59.96 L59.96,37.36 C62.48,40.2 64,43.92 64,48 C64,56.84 56.84,64 48,64 Z" />
+</vector>

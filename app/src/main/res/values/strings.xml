@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FocusGuard</string>
+    <string name="accessibility_service_label">FocusGuard Distraction Blocker</string>
+    <string name="accessibility_service_description">Used by FocusGuard solely to detect short-form feeds (Reels, Shorts) and blocked apps in real-time. No data is stored, read, or transmitted. 100% offline.</string>
+    <string name="device_admin_label">FocusGuard Strict Mode</string>
+    <string name="device_admin_description">Prevents disabling distraction blocks or uninstalling FocusGuard while a Strict Mode focus session is active.</string>
+</resources>
