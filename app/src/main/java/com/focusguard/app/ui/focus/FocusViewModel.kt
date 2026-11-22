@@ -38,6 +38,7 @@ data class FocusUiState(
     val workDurationMinutes: Int = 25,
     val breakDurationMinutes: Int = 5,
     val currentStreakDays: Int = 1,
+    val treesPlanted: Int = 0,
     val selectedSound: FocusSoundType = FocusSoundType.NONE,
     val selectedTheme: FocusTheme = FocusTheme.EMERALD_CALM,
     val isPremium: Boolean = false,
@@ -71,6 +72,12 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             prefsRepo.currentStreakDays.collect { streak ->
                 _uiState.update { it.copy(currentStreakDays = streak) }
+            }
+        }
+
+        viewModelScope.launch {
+            prefsRepo.totalTreesPlanted.collect { trees ->
+                _uiState.update { it.copy(treesPlanted = trees) }
             }
         }
 
@@ -161,6 +168,10 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
         if (phase == PomodoroPhase.WORK) {
             recordSession(durationMins, completed = true)
+            viewModelScope.launch {
+                prefsRepo.incrementTreesPlanted()
+                prefsRepo.addMinutesSaved(durationMins)
+            }
             // Switch to break
             val breakSecs = _uiState.value.breakDurationMinutes * 60
             _uiState.update {

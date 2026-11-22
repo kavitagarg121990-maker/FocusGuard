@@ -26,6 +26,47 @@ class PreferencesRepository(private val context: Context) {
         val BLOCKED_DOMAINS_CSV = stringPreferencesKey("blocked_domains_csv")
         val WHITELIST_PACKAGES_CSV = stringPreferencesKey("whitelist_packages_csv")
         val CURRENT_STREAK_DAYS = intPreferencesKey("current_streak_days")
+        val USER_NAME = stringPreferencesKey("user_name")
+        val CURRENT_USAGE_LEVEL = stringPreferencesKey("current_usage_level")
+        val PRIMARY_GOAL = stringPreferencesKey("primary_goal")
+        val LAST_STREAK_DATE = stringPreferencesKey("last_streak_date")
+        val TOTAL_TREES_PLANTED = intPreferencesKey("total_trees_planted")
+        val TOTAL_MINUTES_SAVED = intPreferencesKey("total_minutes_saved")
+        val STRICT_UNLOCK_TYPE = stringPreferencesKey("strict_unlock_type")
+        val STRICT_PIN = stringPreferencesKey("strict_pin")
+        val EMERGENCY_DELAY_SECONDS = intPreferencesKey("emergency_delay_seconds")
+    }
+
+    val userName: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.USER_NAME] ?: "Friend"
+    }
+
+    val currentUsageLevel: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.CURRENT_USAGE_LEVEL] ?: "4-6 hours"
+    }
+
+    val primaryGoal: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.PRIMARY_GOAL] ?: "Quit Doomscrolling (Reels & Shorts)"
+    }
+
+    val totalTreesPlanted: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[Keys.TOTAL_TREES_PLANTED] ?: 3
+    }
+
+    val totalMinutesSaved: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[Keys.TOTAL_MINUTES_SAVED] ?: 180
+    }
+
+    val strictUnlockType: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.STRICT_UNLOCK_TYPE] ?: "MATH" // "MATH", "PIN", "TIMER"
+    }
+
+    val strictPin: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.STRICT_PIN] ?: "1234"
+    }
+
+    val emergencyDelaySeconds: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[Keys.EMERGENCY_DELAY_SECONDS] ?: 60
     }
 
     val hasCompletedOnboarding: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -57,8 +98,14 @@ class PreferencesRepository(private val context: Context) {
     }
 
     val blockedDomains: Flow<List<String>> = context.dataStore.data.map { prefs ->
-        val csv = prefs[Keys.BLOCKED_DOMAINS_CSV] ?: ""
-        if (csv.isBlank()) emptyList() else csv.split(",").map { it.trim() }
+        val csv = prefs[Keys.BLOCKED_DOMAINS_CSV]
+        if (csv == null) {
+            listOf("instagram.com", "youtube.com", "tiktok.com", "x.com", "twitter.com", "facebook.com", "reddit.com")
+        } else if (csv.isBlank()) {
+            emptyList()
+        } else {
+            csv.split(",").map { it.trim() }
+        }
     }
 
     val whitelistPackages: Flow<Set<String>> = context.dataStore.data.map { prefs ->
@@ -117,5 +164,36 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun updateStreakDays(days: Int) {
         context.dataStore.edit { it[Keys.CURRENT_STREAK_DAYS] = days }
+    }
+
+    suspend fun setUserProfile(name: String, usageLevel: String, goal: String, dailyGoalMinutes: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.USER_NAME] = name.ifBlank { "Friend" }
+            prefs[Keys.CURRENT_USAGE_LEVEL] = usageLevel
+            prefs[Keys.PRIMARY_GOAL] = goal
+            prefs[Keys.DAILY_GOAL_MINUTES] = dailyGoalMinutes
+        }
+    }
+
+    suspend fun incrementTreesPlanted() {
+        context.dataStore.edit { prefs ->
+            val cur = prefs[Keys.TOTAL_TREES_PLANTED] ?: 0
+            prefs[Keys.TOTAL_TREES_PLANTED] = cur + 1
+        }
+    }
+
+    suspend fun addMinutesSaved(minutes: Int) {
+        context.dataStore.edit { prefs ->
+            val cur = prefs[Keys.TOTAL_MINUTES_SAVED] ?: 0
+            prefs[Keys.TOTAL_MINUTES_SAVED] = cur + minutes
+        }
+    }
+
+    suspend fun setStrictUnlockConfig(unlockType: String, pin: String, delaySeconds: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.STRICT_UNLOCK_TYPE] = unlockType
+            prefs[Keys.STRICT_PIN] = pin
+            prefs[Keys.EMERGENCY_DELAY_SECONDS] = delaySeconds
+        }
     }
 }

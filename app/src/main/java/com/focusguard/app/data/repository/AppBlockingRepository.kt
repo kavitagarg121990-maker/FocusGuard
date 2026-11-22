@@ -1,6 +1,7 @@
 package com.focusguard.app.data.repository
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import com.focusguard.app.data.local.dao.AppRuleDao
@@ -33,7 +34,23 @@ class AppBlockingRepository(
      * Loads list of installed apps merged with their local blocking rules.
      */
     suspend fun getInstalledApps(showSystemApps: Boolean = false): List<InstalledAppInfo> = withContext(Dispatchers.IO) {
-        val packages = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+        val launcherIntent = Intent(Intent.ACTION_MAIN, null).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        val launchablePackages = try {
+            packageManager.queryIntentActivities(launcherIntent, 0)
+                .mapNotNull { it.activityInfo?.packageName }
+                .toSet()
+        } catch (e: Exception) {
+            emptySet()
+        }
+
+        val packages = try {
+            packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+        } catch (e: Exception) {
+            emptyList()
+        }
+
         val currentRules = appRuleDao.getAllRules().first().associateBy { it.packageName }
         val ownPackage = context.packageName
 
@@ -41,9 +58,23 @@ class AppBlockingRepository(
             if (appInfo.packageName == ownPackage) return@mapNotNull null
 
             val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-            if (isSystem && !showSystemApps) return@mapNotNull null
+            val isLaunchable = launchablePackages.contains(appInfo.packageName)
 
-            val label = packageManager.getApplicationLabel(appInfo).toString()
+            // When NOT showing system apps:
+            // 1. Keep all non-system user-installed apps
+            // 2. Keep launchable apps (like YouTube, Chrome) that user interacts with
+            // 3. Drop invisible low-level background system services
+            if (!showSystemApps && isSystem && !isLaunchable) {
+                return@mapNotNull null
+            }
+
+            val label = try {
+                packageManager.getApplicationLabel(appInfo).toString()
+            } catch (e: Exception) {
+                appInfo.packageName
+            }
+            if (label.isBlank()) return@mapNotNull null
+
             val rule = currentRules[appInfo.packageName]
 
             InstalledAppInfo(

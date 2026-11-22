@@ -18,7 +18,11 @@ import kotlinx.coroutines.launch
 data class OnboardingUiState(
     val currentPage: Int = 0,
     val hasUsageAccess: Boolean = false,
-    val hasAccessibilityAccess: Boolean = false
+    val hasAccessibilityAccess: Boolean = false,
+    val userName: String = "",
+    val usageLevel: String = "4-6 hours",
+    val primaryGoal: String = "Quit Doomscrolling (Reels & Shorts)",
+    val dailyGoalHours: Int = 3
 )
 
 class OnboardingViewModel(application: Application) : AndroidViewModel(application) {
@@ -49,8 +53,31 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         _uiState.update { it.copy(currentPage = page) }
     }
 
+    fun updateName(name: String) {
+        _uiState.update { it.copy(userName = name) }
+    }
+
+    fun updateUsageLevel(level: String) {
+        _uiState.update { it.copy(usageLevel = level) }
+    }
+
+    fun updatePrimaryGoal(goal: String) {
+        _uiState.update { it.copy(primaryGoal = goal) }
+    }
+
+    fun updateDailyGoalHours(hours: Int) {
+        _uiState.update { it.copy(dailyGoalHours = hours) }
+    }
+
     fun completeOnboarding(onFinished: () -> Unit) {
         viewModelScope.launch {
+            val state = _uiState.value
+            prefsRepo.setUserProfile(
+                name = state.userName.ifBlank { "Champion" },
+                usageLevel = state.usageLevel,
+                goal = state.primaryGoal,
+                dailyGoalMinutes = state.dailyGoalHours * 60
+            )
             prefsRepo.setOnboardingCompleted(true)
             onFinished()
         }

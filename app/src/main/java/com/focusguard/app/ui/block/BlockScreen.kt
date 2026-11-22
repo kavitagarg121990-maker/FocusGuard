@@ -209,9 +209,16 @@ fun AppBlockerTabContent(
                 OutlinedTextField(
                     value = uiState.searchQuery,
                     onValueChange = onSearchChanged,
-                    placeholder = { Text("Search installed apps...") },
+                    placeholder = { Text("Search apps (e.g. YouTube, Insta)...") },
                     leadingIcon = {
                         Icon(imageVector = Icons.Default.Search, contentDescription = null)
+                    },
+                    trailingIcon = {
+                        if (uiState.searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { onSearchChanged("") }) {
+                                Icon(imageVector = Icons.Default.Close, contentDescription = "Clear search")
+                            }
+                        }
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(14.dp),
@@ -255,8 +262,35 @@ fun AppBlockerTabContent(
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             }
+        } else if (uiState.filteredApps.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 40.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "No apps found",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (uiState.searchQuery.isNotEmpty()) "No matching apps for '${uiState.searchQuery}'"
+                            else "Tap the filter icon on the right to show pre-installed system apps.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         } else {
-            items(uiState.filteredApps) { appInfo ->
+            items(
+                items = uiState.filteredApps,
+                key = { it.packageName }
+            ) { appInfo ->
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -624,6 +658,41 @@ fun SchedulesAndWebTabContent(
             )
 
             Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = "1-Tap Quick Block:",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            val popularWebsites = listOf("instagram.com", "youtube.com", "tiktok.com", "x.com", "reddit.com", "facebook.com", "netflix.com")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                popularWebsites.take(4).forEach { site ->
+                    val isBlocked = uiState.blockedWebsites.any { it.equals(site, ignoreCase = true) }
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (isBlocked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable {
+                                if (isBlocked) onRemoveWebsite(site) else onAddWebsite(site)
+                            }
+                    ) {
+                        Text(
+                            text = if (isBlocked) "✓ ${site.substringBefore('.')}" else "+ ${site.substringBefore('.')}",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = if (isBlocked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                }
+            }
 
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(

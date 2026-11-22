@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -25,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DataUsage
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -33,6 +37,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,7 +73,7 @@ fun OnboardingScreen(
     viewModel: OnboardingViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val pagerState = rememberPagerState(pageCount = { 3 })
+    val pagerState = rememberPagerState(pageCount = { 4 })
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -133,7 +139,15 @@ fun OnboardingScreen(
                 when (page) {
                     0 -> OnboardingIntroPage()
                     1 -> OnboardingBlockerPage()
-                    2 -> OnboardingPermissionsPage(
+                    2 -> OnboardingPersonalizationPage(
+                        userName = uiState.userName,
+                        onNameChange = { viewModel.updateName(it) },
+                        selectedUsage = uiState.usageLevel,
+                        onUsageChange = { viewModel.updateUsageLevel(it) },
+                        selectedGoal = uiState.primaryGoal,
+                        onGoalChange = { viewModel.updatePrimaryGoal(it) }
+                    )
+                    3 -> OnboardingPermissionsPage(
                         hasUsageAccess = uiState.hasUsageAccess,
                         hasAccessibilityAccess = uiState.hasAccessibilityAccess,
                         onGrantUsage = {
@@ -156,7 +170,7 @@ fun OnboardingScreen(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    repeat(3) { index ->
+                    repeat(4) { index ->
                         val isSelected = pagerState.currentPage == index
                         Box(
                             modifier = Modifier
@@ -173,7 +187,7 @@ fun OnboardingScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                if (pagerState.currentPage < 2) {
+                if (pagerState.currentPage < 3) {
                     Button(
                         onClick = {
                             coroutineScope.launch {
@@ -439,6 +453,151 @@ fun PermissionCard(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
                             tint = ProgressGreen,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun OnboardingPersonalizationPage(
+    userName: String,
+    onNameChange: (String) -> Unit,
+    selectedUsage: String,
+    onUsageChange: (String) -> Unit,
+    selectedGoal: String,
+    onGoalChange: (String) -> Unit
+) {
+    val scrollState = rememberScrollState()
+    val usageOptions = listOf("2-4 hrs", "4-6 hrs", "6-8 hrs", "8+ hrs")
+    val goalOptions = listOf(
+        "🛑 Quit Reels & Shorts Doomscrolling",
+        "🎯 Prepare for Exams & Studies",
+        "💼 Work Productivity & Deep Focus",
+        "🌙 Better Sleep & Mindful Living"
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(
+            text = "Personalize Your\nFocus Journey",
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 26.sp,
+                lineHeight = 32.sp
+            ),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = "🔒 100% Offline & Private. Saved strictly on device.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Name Field
+        Text(
+            text = "What should we call you?",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = userName,
+            onValueChange = onNameChange,
+            placeholder = { Text("Enter your name or nickname...") },
+            leadingIcon = {
+                Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+            )
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Current Phone Usage
+        Text(
+            text = "Estimated daily screen time currently:",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            usageOptions.forEach { option ->
+                val isSelected = selectedUsage == option
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onUsageChange(option) }
+                ) {
+                    Text(
+                        text = option,
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(vertical = 12.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Primary Goal
+        Text(
+            text = "Select your main target:",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        goalOptions.forEach { goal ->
+            val isSelected = selectedGoal == goal
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                ),
+                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+                    .clickable { onGoalChange(goal) }
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = goal,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium),
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
                     }

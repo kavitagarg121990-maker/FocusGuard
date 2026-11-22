@@ -19,6 +19,11 @@ import java.util.Locale
 
 data class HomeUiState(
     val greeting: String = "Welcome",
+    val userName: String = "Friend",
+    val primaryGoal: String = "Quit Doomscrolling",
+    val streakDays: Int = 3,
+    val treesPlanted: Int = 5,
+    val minutesSaved: Int = 180,
     val formattedDate: String = "",
     val totalScreenTimeMinutes: Long = 0L,
     val dailyGoalMinutes: Long = 300L,
@@ -69,15 +74,26 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         if (!hasPermission) return
 
         viewModelScope.launch {
+            val name = prefsRepo.userName.first()
+            val goal = prefsRepo.dailyGoalMinutes.first().toLong()
+            val pGoal = prefsRepo.primaryGoal.first()
+            val streak = prefsRepo.currentStreakDays.first()
+            val trees = prefsRepo.totalTreesPlanted.first()
+            val savedMins = prefsRepo.totalMinutesSaved.first()
+
             val totalMillis = usageRepo.getTodayTotalScreenTimeMillis()
             val totalMinutes = totalMillis / (1000 * 60)
             val apps = usageRepo.getTodayAppUsageList()
             val maxMillis = apps.maxOfOrNull { it.totalTimeInForegroundMillis } ?: 1L
-            val goal = prefsRepo.dailyGoalMinutes.first().toLong()
             val insight = usageRepo.getSmartInsight()
 
             _uiState.update {
                 it.copy(
+                    userName = name,
+                    primaryGoal = pGoal,
+                    streakDays = streak,
+                    treesPlanted = trees,
+                    minutesSaved = savedMins,
                     totalScreenTimeMinutes = totalMinutes,
                     dailyGoalMinutes = goal,
                     mostUsedApps = apps.take(8),

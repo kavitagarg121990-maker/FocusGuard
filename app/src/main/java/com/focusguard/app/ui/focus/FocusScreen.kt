@@ -214,6 +214,21 @@ fun FocusScreen(
 
             // Readout in center
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                val plantEmoji = when {
+                    !uiState.isRunning -> "🌱"
+                    uiState.pomodoroPhase != PomodoroPhase.WORK -> "☕"
+                    progressFraction > 0.80f -> "🌱"
+                    progressFraction > 0.50f -> "🌿"
+                    progressFraction > 0.20f -> "🪴"
+                    progressFraction > 0.05f -> "🌳"
+                    else -> "🌲"
+                }
+
+                Text(
+                    text = plantEmoji,
+                    fontSize = 32.sp
+                )
+
                 val timeString = if (uiState.timerMode == FocusTimerMode.POMODORO) {
                     val m = uiState.secondsRemaining / 60
                     val s = uiState.secondsRemaining % 60
@@ -227,23 +242,63 @@ fun FocusScreen(
                 Text(
                     text = timeString,
                     style = MaterialTheme.typography.displayLarge.copy(
-                        fontSize = 44.sp,
+                        fontSize = 42.sp,
                         fontWeight = FontWeight.Bold
                     ),
                     color = MaterialTheme.colorScheme.onBackground
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
 
                 val subtitle = if (uiState.timerMode == FocusTimerMode.POMODORO) {
-                    if (uiState.pomodoroPhase == PomodoroPhase.WORK) "Deep Focus" else "Break Time"
+                    if (uiState.pomodoroPhase == PomodoroPhase.WORK) {
+                        when {
+                            !uiState.isRunning -> "Ready to Grow"
+                            progressFraction > 0.80f -> "Sprouting Seed"
+                            progressFraction > 0.50f -> "Growing Leaves"
+                            progressFraction > 0.20f -> "Budding Branches"
+                            else -> "Tree Blooming ✨"
+                        }
+                    } else "Break Time ☕"
                 } else {
                     "Stopwatch Session"
                 }
 
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = primaryThemeColor
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Focus Forest Garden Badge
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("🌲", fontSize = 18.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Focus Forest:",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Text(
+                    text = "${uiState.treesPlanted} Trees Planted",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                     color = primaryThemeColor
                 )
             }
