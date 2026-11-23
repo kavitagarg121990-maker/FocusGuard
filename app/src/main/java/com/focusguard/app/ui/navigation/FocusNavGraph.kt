@@ -6,12 +6,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -51,7 +54,7 @@ fun FocusNavGraph(
     navController: NavHostController = rememberNavController()
 ) {
     val hasCompletedOnboarding by preferencesRepository.hasCompletedOnboarding.collectAsState(initial = true)
-    val isPremium by preferencesRepository.isPremium.collectAsState(initial = false)
+    val isPremium by preferencesRepository.isPremium.collectAsState(initial = true)
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -67,11 +70,13 @@ fun FocusNavGraph(
 
     Scaffold(
         containerColor = Color(0xFF0D1412),
+        contentWindowInsets = WindowInsets(0),
         bottomBar = {
             if (isTopLevelDestination) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.navigationBars)
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     contentAlignment = Alignment.BottomCenter
                 ) {

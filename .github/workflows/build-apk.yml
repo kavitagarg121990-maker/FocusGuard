@@ -35,21 +35,21 @@ jobs:
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FocusGuard-v2.1-release
+          name: FocusGuard-v2.2-release
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
       - name: Copy APK for GitHub Release
-        run: cp app/build/outputs/apk/release/app-release.apk FocusGuard-v2.1-release.apk
+        run: cp app/build/outputs/apk/release/app-release.apk FocusGuard-v2.2-release.apk
 
-      - name: Publish GitHub Release v2.1
+      - name: Publish GitHub Release v2.2
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v2.1.0 --yes || true
-          gh release create v2.1.0 FocusGuard-v2.1-release.apk \
-            --title "FocusGuard v2.1.0 (Official Signed Release)" \
-            --notes "Official Production Release of FocusGuard v2.1.0:
+          gh release delete v2.2.0 --yes || true
+          gh release create v2.2.0 FocusGuard-v2.2-release.apk \
+            --title "FocusGuard v2.2.0 (Official Signed Release)" \
+            --notes "Official Production Release of FocusGuard v2.2.0:
             - Verified Production Certificate (RSA 2048-bit Keystore, debuggable = false)
             - 1-to-1 Premium Dark Emerald Mockup UI
             - App Guard Status Card with 1-Tap Fix

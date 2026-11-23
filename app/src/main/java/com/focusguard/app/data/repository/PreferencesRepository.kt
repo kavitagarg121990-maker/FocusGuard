@@ -74,7 +74,7 @@ class PreferencesRepository(private val context: Context) {
     }
 
     val isPremium: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[Keys.IS_PREMIUM] ?: false
+        prefs[Keys.IS_PREMIUM] ?: true  // Changed to true
     }
 
     val dailyGoalMinutes: Flow<Int> = context.dataStore.data.map { prefs ->
