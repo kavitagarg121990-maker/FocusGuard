@@ -179,7 +179,7 @@ class AppBlockerForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
-        private const val CHANNEL_ID = "focusguard_monitor_channel"
+        const val CHANNEL_ID = "focusguard_monitor_channel"
         private const val NOTIFICATION_ID = 1001
 
         fun start(context: Context) {

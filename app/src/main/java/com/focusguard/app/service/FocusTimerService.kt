@@ -137,7 +137,15 @@ class FocusTimerService : Service() {
         app?.let {
             serviceScope.launch {
                 val bankedMins = (totalDurationSeconds / 60).coerceAtLeast(1)
-                it.focusSessionRepository.recordCompletedSession(bankedMins)
+                val now = System.currentTimeMillis()
+                it.focusSessionRepository.recordCompletedSession(
+                    startTimeMillis = now - (bankedMins * 60000L),
+                    durationMinutes = bankedMins,
+                    sessionType = mode.name,
+                    isStrict = false,
+                    themeId = "emerald",
+                    soundId = "none"
+                )
                 it.preferencesRepository.addMinutesSaved(bankedMins)
             }
         }
@@ -158,7 +166,15 @@ class FocusTimerService : Service() {
         val app = application as? FocusGuardApp
         app?.let {
             serviceScope.launch {
-                it.focusSessionRepository.recordCompletedSession(bankedMinutes)
+                val now = System.currentTimeMillis()
+                it.focusSessionRepository.recordCompletedSession(
+                    startTimeMillis = now - (bankedMinutes * 60000L),
+                    durationMinutes = bankedMinutes,
+                    sessionType = mode.name,
+                    isStrict = false,
+                    themeId = "emerald",
+                    soundId = "none"
+                )
                 it.preferencesRepository.addMinutesSaved(bankedMinutes)
             }
         }
