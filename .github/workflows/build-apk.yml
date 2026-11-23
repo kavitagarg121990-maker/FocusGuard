@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Build Signed Release APK
     runs-on: ubuntu-latest
 
     steps:
@@ -29,24 +29,31 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Debug APK with Gradle
-        run: ./gradlew assembleDebug --stacktrace
+      - name: Build Signed Release APK with Gradle
+        run: ./gradlew assembleRelease --stacktrace
 
-      - name: Upload Debug APK Artifact
+      - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FocusGuard-v2.0-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: FocusGuard-v2.1-release
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
-      - name: Rename APK for Release
-        run: cp app/build/outputs/apk/debug/app-debug.apk FocusGuard-v2.0.apk
+      - name: Copy APK for GitHub Release
+        run: cp app/build/outputs/apk/release/app-release.apk FocusGuard-v2.1-release.apk
 
-      - name: Publish GitHub Release v2.0
+      - name: Publish GitHub Release v2.1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v2.0.0 --yes || true
-          gh release create v2.0.0 FocusGuard-v2.0.apk \
-            --title "FocusGuard v2.0.0 (Upgraded)" \
-            --notes "FocusGuard v2.0 Upgraded APK: Package Visibility fix, Real-time App Search, Website Blocker (Chrome & browsers), Local Signup & Personalization, Focus Forest Tree Growth Animation, and Streaks."
+          gh release delete v2.1.0 --yes || true
+          gh release create v2.1.0 FocusGuard-v2.1-release.apk \
+            --title "FocusGuard v2.1.0 (Official Signed Release)" \
+            --notes "Official Production Release of FocusGuard v2.1.0:
+            - Verified Production Certificate (RSA 2048-bit Keystore, debuggable = false)
+            - 1-to-1 Premium Dark Emerald Mockup UI
+            - App Guard Status Card with 1-Tap Fix
+            - Daily Focus Goal with Glowing Neon Gradient Bar
+            - Stopwatch & Pomodoro with 'Pause (2)', '+ 5 min', and 'Finish & Bank Time'
+            - 40+ Science-backed Focus & Digital Wellness Tips
+            - Floating Bottom Navigation Dock"
