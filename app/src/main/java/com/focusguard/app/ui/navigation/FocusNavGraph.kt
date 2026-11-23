@@ -69,7 +69,7 @@ fun FocusNavGraph(
     )
 
     Scaffold(
-        containerColor = Color(0xFF0D1412),
+        containerColor = Color(0xFF090E0C),
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
             if (isTopLevelDestination) {

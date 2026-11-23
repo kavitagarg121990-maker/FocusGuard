@@ -11,14 +11,12 @@ import com.focusguard.app.data.model.FocusSoundType
 import com.focusguard.app.data.model.FocusTheme
 import com.focusguard.app.service.AudioFocusPlayer
 import com.focusguard.app.service.FocusAccessibilityService
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import com.focusguard.app.service.FocusTimerManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 enum class FocusTimerMode {
@@ -36,9 +34,10 @@ data class FocusUiState(
     val timerMode: FocusTimerMode = FocusTimerMode.STOPWATCH,
     val pomodoroPhase: PomodoroPhase = PomodoroPhase.WORK,
     val isRunning: Boolean = false,
+    val isPaused: Boolean = false,
     val secondsRemaining: Int = 25 * 60,
     val totalPhaseDurationSeconds: Int = 25 * 60,
-    val stopwatchSecondsElapsed: Int = 151, // 02:31 default to match mockup initially
+    val stopwatchSecondsElapsed: Int = 151, // 02:31 default
     val workDurationMinutes: Int = 25,
     val breakDurationMinutes: Int = 5,
     val currentStreakDays: Int = 3,
@@ -80,11 +79,27 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(FocusUiState())
     val uiState: StateFlow<FocusUiState> = _uiState.asStateFlow()
 
-    private var timerJob: Job? = null
-    private var sessionStartTimeMillis = 0L
-
     init {
         loadData()
+        observeTimerManager()
+    }
+
+    private fun observeTimerManager() {
+        viewModelScope.launch {
+            FocusTimerManager.timerState.collect { timer ->
+                _uiState.update {
+                    it.copy(
+                        isRunning = timer.isRunning,
+                        isPaused = timer.isPaused,
+                        timerMode = timer.mode,
+                        stopwatchSecondsElapsed = timer.stopwatchSeconds,
+                        secondsRemaining = timer.secondsRemaining,
+                        totalPhaseDurationSeconds = timer.totalPhaseDurationSeconds,
+                        remainingPauses = timer.remainingPauses
+                    )
+                }
+            }
+        }
     }
 
     fun loadData() {
@@ -111,6 +126,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             prefsRepo.dailyGoalMinutes.collect { goal ->
                 _uiState.update { it.copy(goalMinutes = goal) }
+                FocusTimerManager.setDailyGoal(goal)
             }
         }
 
@@ -137,159 +153,83 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 val totalMins = (usageRepo.getTodayTotalScreenTimeMillis() / 60000L).toInt()
-                _uiState.update { it.copy(todayFocusMinutes = totalMins.coerceAtLeast(94)) }
+                val focusMins = prefsRepo.totalMinutesSaved.first()
+                val finalFocus = if (focusMins > 0) focusMins else 94
+                _uiState.update { it.copy(todayFocusMinutes = finalFocus) }
+                FocusTimerManager.setBankedMinutes(finalFocus)
             } catch (e: Exception) {
                 // Keep default
             }
-        }
-
-        viewModelScope.launch {
-            sessionRepo.updateStreak()
         }
     }
 
     fun checkAccessibility() {
         val am = app.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
-        val isEnabled = am?.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-            ?.any { it.id.contains(app.packageName) } ?: false
-        _uiState.update { it.copy(isAccessibilityEnabled = isEnabled) }
-    }
-
-    fun setTimerMode(mode: FocusTimerMode, onNeedsPremium: () -> Unit) {
-        stopTimer()
-        _uiState.update { it.copy(timerMode = mode) }
+        val enabled = if (am == null) false else {
+            val services = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+            services.any {
+                it.resolveInfo?.serviceInfo?.packageName == app.packageName &&
+                it.resolveInfo?.serviceInfo?.name?.contains("FocusAccessibilityService") == true
+            }
+        }
+        _uiState.update { it.copy(isAccessibilityEnabled = enabled) }
     }
 
     fun togglePause() {
-        if (_uiState.value.isRunning) {
-            pauseTimer()
-            if (_uiState.value.remainingPauses > 0) {
-                _uiState.update { it.copy(remainingPauses = it.remainingPauses - 1) }
-            }
-        } else {
-            startTimer()
-        }
+        FocusTimerManager.togglePause(getApplication())
     }
 
     fun addFiveMinutes() {
-        if (_uiState.value.timerMode == FocusTimerMode.POMODORO) {
-            val newRemaining = _uiState.value.secondsRemaining + 300
-            val newTotal = _uiState.value.totalPhaseDurationSeconds + 300
-            _uiState.update { it.copy(secondsRemaining = newRemaining, totalPhaseDurationSeconds = newTotal) }
-        } else {
-            val newElapsed = _uiState.value.stopwatchSecondsElapsed + 300
-            _uiState.update { it.copy(stopwatchSecondsElapsed = newElapsed) }
-        }
+        FocusTimerManager.addFiveMinutes(getApplication())
     }
 
     fun finishAndBankTime() {
-        val elapsedSeconds = if (_uiState.value.timerMode == FocusTimerMode.POMODORO) {
-            _uiState.value.totalPhaseDurationSeconds - _uiState.value.secondsRemaining
-        } else {
-            _uiState.value.stopwatchSecondsElapsed
-        }
-        val elapsedMinutes = (elapsedSeconds / 60).coerceAtLeast(1)
-
-        pauseTimer()
-        recordSession(elapsedMinutes, completed = true)
-
+        val bankedMinutes = FocusTimerManager.finishAndBank(getApplication())
         viewModelScope.launch {
             prefsRepo.incrementTreesPlanted()
-            prefsRepo.addMinutesSaved(elapsedMinutes)
+            prefsRepo.addMinutesSaved(bankedMinutes)
             _uiState.update {
                 it.copy(
-                    todayFocusMinutes = it.todayFocusMinutes + elapsedMinutes,
-                    treesPlanted = it.treesPlanted + 1,
-                    stopwatchSecondsElapsed = 0,
-                    remainingPauses = 2
+                    todayFocusMinutes = it.todayFocusMinutes + bankedMinutes,
+                    treesPlanted = it.treesPlanted + 1
                 )
             }
         }
-        resetTimerValues()
     }
 
     fun startTimer() {
-        if (_uiState.value.isRunning) return
-        sessionStartTimeMillis = System.currentTimeMillis()
-        _uiState.update { it.copy(isRunning = true) }
-
-        if (_uiState.value.selectedSound != FocusSoundType.NONE) {
-            audioPlayer.play(_uiState.value.selectedSound)
-        }
-
-        timerJob?.cancel()
-        timerJob = viewModelScope.launch {
-            while (isActive && _uiState.value.isRunning) {
-                delay(1000)
-                if (_uiState.value.timerMode == FocusTimerMode.POMODORO) {
-                    val currentRemaining = _uiState.value.secondsRemaining
-                    if (currentRemaining > 1) {
-                        _uiState.update { it.copy(secondsRemaining = currentRemaining - 1) }
-                    } else {
-                        onPhaseCompleted()
-                    }
-                } else {
-                    _uiState.update { it.copy(stopwatchSecondsElapsed = it.stopwatchSecondsElapsed + 1) }
-                }
-            }
-        }
+        FocusTimerManager.start(
+            context = getApplication(),
+            mode = _uiState.value.timerMode,
+            durationSeconds = _uiState.value.totalPhaseDurationSeconds
+        )
     }
 
     fun pauseTimer() {
-        _uiState.update { it.copy(isRunning = false) }
-        timerJob?.cancel()
-        timerJob = null
-        audioPlayer.stop()
+        FocusTimerManager.pause(getApplication())
     }
 
     fun stopTimer() {
-        pauseTimer()
-        resetTimerValues()
+        FocusTimerManager.finishAndBank(getApplication())
     }
 
-    private fun onPhaseCompleted() {
-        audioPlayer.stop()
-        val phase = _uiState.value.pomodoroPhase
-        val durationMins = if (phase == PomodoroPhase.WORK) _uiState.value.workDurationMinutes else _uiState.value.breakDurationMinutes
-
-        if (phase == PomodoroPhase.WORK) {
-            recordSession(durationMins, completed = true)
-            viewModelScope.launch {
-                prefsRepo.incrementTreesPlanted()
-                prefsRepo.addMinutesSaved(durationMins)
-            }
-            val breakSecs = _uiState.value.breakDurationMinutes * 60
-            _uiState.update {
-                it.copy(
-                    isRunning = false,
-                    pomodoroPhase = PomodoroPhase.SHORT_BREAK,
-                    secondsRemaining = breakSecs,
-                    totalPhaseDurationSeconds = breakSecs
-                )
-            }
-        } else {
-            val workSecs = _uiState.value.workDurationMinutes * 60
-            _uiState.update {
-                it.copy(
-                    isRunning = false,
-                    pomodoroPhase = PomodoroPhase.WORK,
-                    secondsRemaining = workSecs,
-                    totalPhaseDurationSeconds = workSecs
-                )
-            }
+    fun updateDailyGoal(hours: Int, minutes: Int) {
+        val totalMinutes = (hours * 60 + minutes).coerceAtLeast(15)
+        viewModelScope.launch {
+            prefsRepo.setDailyGoalMinutes(totalMinutes)
+            _uiState.update { it.copy(goalMinutes = totalMinutes) }
+            FocusTimerManager.setDailyGoal(totalMinutes)
         }
     }
 
-    private fun recordSession(minutes: Int, completed: Boolean) {
-        viewModelScope.launch {
-            val strict = prefsRepo.isStrictModeEnabled.first()
-            sessionRepo.recordCompletedSession(
-                startTimeMillis = if (sessionStartTimeMillis > 0) sessionStartTimeMillis else System.currentTimeMillis() - minutes * 60000L,
-                durationMinutes = minutes,
-                sessionType = _uiState.value.timerMode.name,
-                isStrict = strict,
-                themeId = _uiState.value.selectedTheme.id,
-                soundId = _uiState.value.selectedSound.id
+    fun setTimerModeAndDuration(mode: FocusTimerMode, durationMinutes: Int) {
+        FocusTimerManager.setMode(mode, durationMinutes)
+        _uiState.update {
+            it.copy(
+                timerMode = mode,
+                workDurationMinutes = durationMinutes,
+                secondsRemaining = durationMinutes * 60,
+                totalPhaseDurationSeconds = durationMinutes * 60
             )
         }
     }
@@ -305,18 +245,6 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             prefsRepo.setActiveThemeId(theme.id)
             _uiState.update { it.copy(selectedTheme = theme) }
-        }
-    }
-
-    private fun resetTimerValues() {
-        val workSecs = _uiState.value.workDurationMinutes * 60
-        _uiState.update {
-            it.copy(
-                pomodoroPhase = PomodoroPhase.WORK,
-                secondsRemaining = workSecs,
-                totalPhaseDurationSeconds = workSecs,
-                stopwatchSecondsElapsed = 0
-            )
         }
     }
 

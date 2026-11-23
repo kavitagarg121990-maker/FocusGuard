@@ -40,6 +40,7 @@ class FocusAccessibilityService : AccessibilityService() {
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var activeRules: List<ShortContentRuleEntity> = emptyList()
     private var blockedDomains: List<String> = emptyList()
+    private var blockedPackages: Set<String> = emptySet()
     private var isStrictModeActive = false
 
     private var lastActionTime = 0L
@@ -58,6 +59,14 @@ class FocusAccessibilityService : AccessibilityService() {
             shortContentDao.getActiveRules().collect { rules ->
                 activeRules = rules
                 Log.d(TAG, "Updated active short content rules: ${rules.map { it.id }}")
+            }
+        }
+
+        // Observe blocked apps for 0ms instant blocking
+        serviceScope.launch {
+            app.database.appRuleDao().getAllRules().collect { rules ->
+                blockedPackages = rules.filter { it.isBlocked }.map { it.packageName }.toSet()
+                Log.d(TAG, "Updated blocked packages cache: ${blockedPackages.size} apps blocked")
             }
         }
 
@@ -80,12 +89,41 @@ class FocusAccessibilityService : AccessibilityService() {
         if (event == null) return
 
         val packageName = event.packageName?.toString() ?: return
+        if (packageName == applicationContext.packageName) return
         val eventType = event.eventType
 
         // Filter relevant event types to avoid unnecessary node traversal
         if (eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
             eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
         ) {
+            return
+        }
+
+        // 0. Instant App Blocking: If user blocked this app, immediately kick to Home & display overlay
+        if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && blockedPackages.contains(packageName)) {
+            if (isHandlingBlock.compareAndSet(false, true)) {
+                performGlobalAction(GLOBAL_ACTION_HOME)
+                val label = try {
+                    packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
+                } catch (e: Exception) {
+                    packageName.substringAfterLast('.')
+                }
+                showBlockOverlay(
+                    packageName = packageName,
+                    appName = label,
+                    reason = "$label is blocked by your FocusGuard rules."
+                )
+                val app = application as? FocusGuardApp
+                app?.let {
+                    serviceScope.launch {
+                        it.usageStatsRepository.recordBlockEvent(packageName)
+                    }
+                }
+                serviceScope.launch {
+                    kotlinx.coroutines.delay(1200)
+                    isHandlingBlock.set(false)
+                }
+            }
             return
         }
 

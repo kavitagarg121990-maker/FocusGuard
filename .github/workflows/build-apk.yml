@@ -35,25 +35,26 @@ jobs:
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FocusGuard-v2.2-release
+          name: FocusGuard-v2.3-release
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
       - name: Copy APK for GitHub Release
-        run: cp app/build/outputs/apk/release/app-release.apk FocusGuard-v2.2-release.apk
+        run: cp app/build/outputs/apk/release/app-release.apk FocusGuard-v2.3-release.apk
 
-      - name: Publish GitHub Release v2.2
+      - name: Publish GitHub Release v2.3
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v2.2.0 --yes || true
-          gh release create v2.2.0 FocusGuard-v2.2-release.apk \
-            --title "FocusGuard v2.2.0 (Official Signed Release)" \
-            --notes "Official Production Release of FocusGuard v2.2.0:
-            - Verified Production Certificate (RSA 2048-bit Keystore, debuggable = false)
-            - 1-to-1 Premium Dark Emerald Mockup UI
-            - App Guard Status Card with 1-Tap Fix
-            - Daily Focus Goal with Glowing Neon Gradient Bar
-            - Stopwatch & Pomodoro with 'Pause (2)', '+ 5 min', and 'Finish & Bank Time'
-            - 40+ Science-backed Focus & Digital Wellness Tips
-            - Floating Bottom Navigation Dock"
+          gh release delete v2.3.0 --yes || true
+          gh release create v2.3.0 FocusGuard-v2.3-release.apk \
+            --title "FocusGuard v2.3.0 (Official Signed Production Release)" \
+            --notes "Official Production Release of FocusGuard v2.3.0:
+            - ⚡ Instant 0ms App Blocking: Individual apps blocked immediately via real-time Accessibility interception
+            - 🔔 Live Background Focus Timer & Notification: Persistent timer with Pause, +5m, and Finish controls that keeps ticking even when screen is locked or app is closed
+            - 🔒 Official Release Keystore Signed: v1+v2+v3 signature scheme, debuggable = false, production Play Protect standard
+            - ✏️ Editable Daily Goal: Tap the pencil icon directly on the goal card to customize daily hours and minutes
+            - ⏱️ Editable Timer Modes: Switch easily between Stopwatch and custom Pomodoro sprints (15m, 25m, 45m, 60m)
+            - 🩺 Permissions Doctor in Settings: Real-time status chips and 1-tap grant buttons for Accessibility, Usage Stats, Overlay, Notifications, and Battery Whitelist
+            - 🖤 100% OLED Deep Black Theme: AMOLED blacks across all screens with glowing neon emerald styling and zero navigation bar overflow
+            - 📴 100% Certified Private & Offline: Zero internet permission, all records stored securely on-device in SQLite"

@@ -68,7 +68,7 @@ fun StatsScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(Color(0xFF090E0C))
             .padding(horizontal = 20.dp)
     ) {
         item {
@@ -90,8 +90,8 @@ fun StatsScreen(
             // Time Range Tabs
             PrimaryTabRow(
                 selectedTabIndex = uiState.selectedTimeRange,
-                containerColor = MaterialTheme.colorScheme.background,
-                contentColor = MaterialTheme.colorScheme.primary
+                containerColor = Color(0xFF090E0C),
+                contentColor = Color(0xFF00E676)
             ) {
                 listOf("Daily", "Weekly Trend", "Per-App Donut").forEachIndexed { index, title ->
                     Tab(

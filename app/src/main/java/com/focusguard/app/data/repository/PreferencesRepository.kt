@@ -35,6 +35,26 @@ class PreferencesRepository(private val context: Context) {
         val STRICT_UNLOCK_TYPE = stringPreferencesKey("strict_unlock_type")
         val STRICT_PIN = stringPreferencesKey("strict_pin")
         val EMERGENCY_DELAY_SECONDS = intPreferencesKey("emergency_delay_seconds")
+        val HAPTICS_ENABLED = booleanPreferencesKey("haptics_enabled")
+        val SOUND_CHIME_ENABLED = booleanPreferencesKey("sound_chime_enabled")
+        val POMODORO_WORK_MINUTES = intPreferencesKey("pomodoro_work_minutes")
+        val POMODORO_BREAK_MINUTES = intPreferencesKey("pomodoro_break_minutes")
+    }
+
+    val hapticsEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.HAPTICS_ENABLED] ?: true
+    }
+
+    val soundChimeEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SOUND_CHIME_ENABLED] ?: true
+    }
+
+    val pomodoroWorkMinutes: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[Keys.POMODORO_WORK_MINUTES] ?: 25
+    }
+
+    val pomodoroBreakMinutes: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[Keys.POMODORO_BREAK_MINUTES] ?: 5
     }
 
     val userName: Flow<String> = context.dataStore.data.map { prefs ->
@@ -128,6 +148,22 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun setDailyGoalMinutes(minutes: Int) {
         context.dataStore.edit { it[Keys.DAILY_GOAL_MINUTES] = minutes }
+    }
+
+    suspend fun setHapticsEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.HAPTICS_ENABLED] = enabled }
+    }
+
+    suspend fun setSoundChimeEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.SOUND_CHIME_ENABLED] = enabled }
+    }
+
+    suspend fun setPomodoroWorkMinutes(minutes: Int) {
+        context.dataStore.edit { it[Keys.POMODORO_WORK_MINUTES] = minutes }
+    }
+
+    suspend fun setPomodoroBreakMinutes(minutes: Int) {
+        context.dataStore.edit { it[Keys.POMODORO_BREAK_MINUTES] = minutes }
     }
 
     suspend fun setStrictMode(enabled: Boolean) {

@@ -63,7 +63,7 @@ fun TipsScreen() {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0D1412))
+            .background(Color(0xFF090E0C))
             .padding(horizontal = 20.dp)
     ) {
         item {

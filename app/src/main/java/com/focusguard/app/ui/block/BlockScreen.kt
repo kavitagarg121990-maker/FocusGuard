@@ -89,20 +89,20 @@ fun BlockScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(Color(0xFF090E0C))
     ) {
         // Top Header
         Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp)) {
             Text(
                 text = "Block Rules",
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onBackground
+                color = Color.White
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Block entire apps, recurring schedules, or short-form feeds",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color(0xFF8B9E99)
             )
         }
 
@@ -111,8 +111,8 @@ fun BlockScreen(
         // Tabs
         PrimaryTabRow(
             selectedTabIndex = uiState.selectedTab,
-            containerColor = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.primary,
+            containerColor = Color(0xFF090E0C),
+            contentColor = Color(0xFF00E676),
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {
             Tab(
