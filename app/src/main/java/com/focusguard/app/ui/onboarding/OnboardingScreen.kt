@@ -2,51 +2,57 @@ package com.focusguard.app.ui.onboarding
 
 import android.content.Intent
 import android.provider.Settings
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DataUsage
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,31 +60,39 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.focusguard.app.R
-import com.focusguard.app.ui.theme.ProgressGreen
-import kotlinx.coroutines.launch
+import com.focusguard.app.ui.components.DottedMountainClimbCanvas
+import com.focusguard.app.ui.components.DottedShieldPlateauCanvas
+import com.focusguard.app.ui.components.GuardyMascotHead
+import com.focusguard.app.ui.theme.AmoledBlack
+import com.focusguard.app.ui.theme.CardDark
+import com.focusguard.app.ui.theme.GuardGreen
+import com.focusguard.app.ui.theme.GuardRed
+import com.focusguard.app.ui.theme.TextMuted
+import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OnboardingScreen(
     onFinished: () -> Unit,
     viewModel: OnboardingViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val pagerState = rememberPagerState(pageCount = { 4 })
-    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Refresh permissions automatically when returning from Settings screen
+    BackHandler(enabled = uiState.step > 0) {
+        viewModel.previousStep()
+    }
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -89,373 +103,689 @@ fun OnboardingScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    val backgroundBrush = when (uiState.step) {
+        5, 6 -> Brush.verticalGradient(
+            listOf(Color(0xFF060707), Color(0xFF1A0808), Color(0xFF280B0B))
+        )
+        7 -> Brush.verticalGradient(
+            listOf(Color(0xFF071B05), Color(0xFF0E2C08), Color(0xFF0B2406))
+        )
+        else -> Brush.verticalGradient(listOf(AmoledBlack, AmoledBlack))
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.surface,
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            )
+            .background(backgroundBrush)
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .windowInsetsPadding(WindowInsets.navigationBars)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp)
-        ) {
-            // Top Bar with Skip (available on pages 0 and 1)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "FocusGuard",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                if (pagerState.currentPage < 2) {
-                    TextButton(onClick = {
-                        coroutineScope.launch { pagerState.animateScrollToPage(2) }
-                    }) {
-                        Text("Skip", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        AnimatedContent(
+            targetState = uiState.step,
+            transitionSpec = { fadeIn() togetherWith fadeOut() },
+            label = "OnboardingStep"
+        ) { step ->
+            when (step) {
+                0 -> IntroMascotStep(onContinue = { viewModel.nextStep() })
+                1 -> QuizStepLayout(
+                    progress = 0.22f,
+                    question = "Are you preparing for any exam?",
+                    canContinue = uiState.isPreparingExam != null,
+                    onContinue = { viewModel.nextStep() }
+                ) {
+                    QuizOptionCard(
+                        label = "Yes",
+                        selected = uiState.isPreparingExam == true,
+                        onClick = { viewModel.setPreparingExam(true) }
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    QuizOptionCard(
+                        label = "No",
+                        selected = uiState.isPreparingExam == false,
+                        onClick = { viewModel.setPreparingExam(false) }
+                    )
+                }
+                2 -> {
+                    val filteredExams = remember(uiState.examSearchQuery) {
+                        if (uiState.examSearchQuery.isBlank()) viewModel.availableExams
+                        else viewModel.availableExams.filter {
+                            it.contains(uiState.examSearchQuery, ignoreCase = true)
+                        }
+                    }
+                    QuizStepLayout(
+                        progress = 0.42f,
+                        question = "Which exam are you preparing for?",
+                        canContinue = uiState.selectedExam.isNotBlank(),
+                        onContinue = { viewModel.nextStep() }
+                    ) {
+                        OutlinedTextField(
+                            value = uiState.examSearchQuery,
+                            onValueChange = { viewModel.setExamSearchQuery(it) },
+                            placeholder = { Text("Search exams (UPSC, NEET, Banking...)", color = TextMuted) },
+                            leadingIcon = {
+                                Icon(Icons.Default.Search, contentDescription = null, tint = TextMuted)
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = CardDark,
+                                unfocusedContainerColor = CardDark,
+                                focusedBorderColor = GuardGreen,
+                                unfocusedBorderColor = Color(0xFF232724),
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(filteredExams) { exam ->
+                                QuizOptionCard(
+                                    label = exam,
+                                    selected = uiState.selectedExam == exam,
+                                    onClick = { viewModel.setSelectedExam(exam) }
+                                )
+                            }
+                        }
                     }
                 }
+                3 -> QuizStepLayout(
+                    progress = 0.65f,
+                    question = "How often do you study?",
+                    canContinue = uiState.studyFrequency.isNotBlank(),
+                    onContinue = { viewModel.nextStep() }
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(viewModel.studyFrequencies) { freq ->
+                            QuizOptionCard(
+                                label = freq,
+                                selected = uiState.studyFrequency == freq,
+                                onClick = { viewModel.setStudyFrequency(freq) }
+                            )
+                        }
+                    }
+                }
+                4 -> QuizStepLayout(
+                    progress = 0.88f,
+                    question = "When do you scroll the most?",
+                    canContinue = uiState.scrollHabit.isNotBlank(),
+                    onContinue = { viewModel.nextStep() }
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(viewModel.scrollHabits) { habit ->
+                            QuizOptionCard(
+                                label = habit,
+                                selected = uiState.scrollHabit == habit,
+                                onClick = { viewModel.setScrollHabit(habit) }
+                            )
+                        }
+                    }
+                }
+                5 -> ClimbStoryStep(
+                    onContinue = { viewModel.nextStep() }
+                )
+                6 -> {
+                    val (highlight, subtitle) = viewModel.examStatisticHeadline()
+                    ExamStatStoryStep(
+                        highlight = highlight,
+                        subtitle = subtitle,
+                        onContinue = { viewModel.nextStep() }
+                    )
+                }
+                7 -> ShieldStoryStep(
+                    onContinue = { viewModel.nextStep() }
+                )
+                8 -> SetupPermissionsStep(
+                    userName = uiState.userName,
+                    onNameChange = { viewModel.updateName(it) },
+                    hasUsageAccess = uiState.hasUsageAccess,
+                    hasAccessibilityAccess = uiState.hasAccessibilityAccess,
+                    onGrantUsage = {
+                        context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                    },
+                    onGrantAccessibility = {
+                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    },
+                    onFinish = { viewModel.completeOnboarding(onFinished) }
+                )
             }
+        }
+    }
+}
 
-            // Pager Content
-            HorizontalPager(
-                state = pagerState,
+@Composable
+private fun IntroMascotStep(onContinue: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Spacer(modifier = Modifier.height(36.dp))
+
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "Hi, I’m Guardy. I’ll help you stay\nfocused on your studies!",
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 23.sp,
+                    lineHeight = 30.sp
+                ),
+                textAlign = TextAlign.Center,
+                color = Color.White
+            )
+
+            Spacer(modifier = Modifier.height(36.dp))
+
+            GuardyMascotHead(
+                modifier = Modifier.size(300.dp),
+                showHalo = true
+            )
+        }
+
+        WhitePillButton(
+            text = "Continue",
+            enabled = true,
+            onClick = onContinue
+        )
+    }
+}
+
+@Composable
+private fun QuizStepLayout(
+    progress: Float,
+    question: String,
+    canContinue: Boolean,
+    onContinue: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp, vertical = 20.dp)
+    ) {
+        // Top Progress Bar
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(RoundedCornerShape(50))
+                .background(Color(0xFF232724))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(progress)
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.White)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Guardy + Chat Bubble
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF121513)),
+                contentAlignment = Alignment.Center
+            ) {
+                GuardyMascotHead(modifier = Modifier.size(66.dp), showHalo = false)
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFF1A1D1B),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = question,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 23.sp
+                    ),
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(26.dp))
+
+        Box(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                content()
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        WhitePillButton(
+            text = "Continue",
+            enabled = canContinue,
+            onClick = onContinue
+        )
+    }
+}
+
+@Composable
+private fun QuizOptionCard(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = if (selected) Color(0xFF172714) else CardDark,
+        border = BorderStroke(
+            width = if (selected) 1.5.dp else 1.dp,
+            color = if (selected) GuardGreen else Color(0xFF222623)
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = Color.White
+            )
+            RadioButton(
+                selected = selected,
+                onClick = onClick,
+                colors = RadioButtonDefaults.colors(
+                    selectedColor = GuardGreen,
+                    unselectedColor = Color(0xFF7B817D)
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun ClimbStoryStep(onContinue: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp, vertical = 20.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(48.dp))
+            Text(
+                text = buildAnnotatedString {
+                    append("Your ")
+                    withStyle(SpanStyle(color = GuardGreen)) { append("dream") }
+                    append("\nis a long climb")
+                },
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp,
+                    lineHeight = 31.sp
+                ),
+                textAlign = TextAlign.Center,
+                color = Color.White
+            )
+
+            Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-            ) { page ->
-                when (page) {
-                    0 -> OnboardingIntroPage()
-                    1 -> OnboardingBlockerPage()
-                    2 -> OnboardingPersonalizationPage(
-                        userName = uiState.userName,
-                        onNameChange = { viewModel.updateName(it) },
-                        selectedUsage = uiState.usageLevel,
-                        onUsageChange = { viewModel.updateUsageLevel(it) },
-                        selectedGoal = uiState.primaryGoal,
-                        onGoalChange = { viewModel.updatePrimaryGoal(it) }
-                    )
-                    3 -> OnboardingPermissionsPage(
-                        hasUsageAccess = uiState.hasUsageAccess,
-                        hasAccessibilityAccess = uiState.hasAccessibilityAccess,
-                        onGrantUsage = {
-                            context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-                        },
-                        onGrantAccessibility = {
-                            context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                        }
-                    )
-                }
-            }
-
-            // Bottom Navigation & Indicators
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Page Indicator Dots
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                DottedMountainClimbCanvas(
+                    modifier = Modifier.fillMaxSize(),
+                    showPeakFlag = true,
+                    showClimber = true
+                )
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = Color.Transparent,
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.45f)),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 44.dp, end = 48.dp)
                 ) {
-                    repeat(4) { index ->
-                        val isSelected = pagerState.currentPage == index
-                        Box(
-                            modifier = Modifier
-                                .padding(horizontal = 4.dp)
-                                .size(if (isSelected) 10.dp else 6.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (isSelected) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.surfaceVariant
-                                )
-                        )
-                    }
+                    Text(
+                        text = "95%",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                if (pagerState.currentPage < 3) {
-                    Button(
-                        onClick = {
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        Text("Next", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                } else {
-                    val canContinue = uiState.hasUsageAccess
-                    Button(
-                        onClick = { viewModel.completeOnboarding(onFinished) },
-                        enabled = canContinue,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        Text(
-                            text = if (canContinue) "Get Started" else "Grant Usage Access to Continue",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "You",
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 118.dp, bottom = 54.dp)
+                )
             }
+
+            WhitePillButton(text = "Continue", enabled = true, onClick = onContinue)
         }
     }
 }
 
 @Composable
-fun OnboardingIntroPage() {
+private fun ExamStatStoryStep(
+    highlight: String,
+    subtitle: String,
+    onContinue: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(horizontal = 20.dp, vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.ic_shield_check),
-            contentDescription = "Shield illustration",
-            modifier = Modifier.size(130.dp)
-        )
-
-        Spacer(modifier = Modifier.height(36.dp))
-
+        Spacer(modifier = Modifier.height(48.dp))
         Text(
-            text = "Take back control\nof your time",
-            style = MaterialTheme.typography.headlineMedium.copy(
+            text = buildAnnotatedString {
+                withStyle(SpanStyle(color = GuardRed)) { append(highlight) }
+                append(" ")
+                append(subtitle)
+            },
+            style = MaterialTheme.typography.headlineSmall.copy(
                 fontWeight = FontWeight.Bold,
-                fontSize = 28.sp,
-                lineHeight = 34.sp
+                fontSize = 23.sp,
+                lineHeight = 30.sp
             ),
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurface
+            color = Color.White,
+            modifier = Modifier.padding(horizontal = 10.dp)
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            DottedMountainClimbCanvas(
+                modifier = Modifier.fillMaxSize(),
+                showPeakFlag = true,
+                showClimber = true
+            )
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = Color.Transparent,
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.45f)),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 44.dp, end = 48.dp)
+            ) {
+                Text(
+                    text = "95%",
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
+            Text(
+                text = "You",
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 118.dp, bottom = 54.dp)
+            )
+        }
+
+        WhitePillButton(text = "Continue", enabled = true, onClick = onContinue)
+    }
+}
+
+@Composable
+private fun ShieldStoryStep(onContinue: () -> Unit) {
+    var lockedPhase by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        delay(1700)
+        lockedPhase = true
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp, vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(34.dp))
 
         Text(
-            text = "Reclaim hours lost to automatic scrolling. Gentle, mindful friction helps you build conscious digital habits.",
-            style = MaterialTheme.typography.bodyLarge,
+            text = if (!lockedPhase) {
+                buildAnnotatedString {
+                    append("But don’t worry, ")
+                    withStyle(SpanStyle(color = GuardGreen)) { append("FocusGuard") }
+                    append("\nhas helped ")
+                    withStyle(SpanStyle(color = GuardGreen)) { append("50 lakh") }
+                    append(" students")
+                }
+            } else {
+                buildAnnotatedString {
+                    append("It ")
+                    withStyle(SpanStyle(color = GuardGreen)) { append("blocks the apps") }
+                    append("\nthat pull you down")
+                }
+            },
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 23.sp,
+                lineHeight = 30.sp
+            ),
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            color = Color.White
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            DottedShieldPlateauCanvas(
+                modifier = Modifier.fillMaxSize(),
+                showPadlocks = lockedPhase
+            )
+            Text(
+                text = "You",
+                color = GuardGreen,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(bottom = 110.dp)
+            )
+        }
+
+        WhitePillButton(
+            text = "Continue",
+            enabled = true,
+            onClick = {
+                if (!lockedPhase) lockedPhase = true else onContinue()
+            }
         )
     }
 }
 
 @Composable
-fun OnboardingBlockerPage() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.ic_shorts_block),
-            contentDescription = "Short-form block illustration",
-            modifier = Modifier.size(130.dp)
-        )
-
-        Spacer(modifier = Modifier.height(36.dp))
-
-        Text(
-            text = "Block distracting apps\n& short-form content",
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 28.sp,
-                lineHeight = 34.sp
-            ),
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Text(
-            text = "Keep YouTube and Instagram for learning and friends, while blocking the addictive Reels and Shorts doomloops.",
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-    }
-}
-
-@Composable
-fun OnboardingPermissionsPage(
+private fun SetupPermissionsStep(
+    userName: String,
+    onNameChange: (String) -> Unit,
     hasUsageAccess: Boolean,
     hasAccessibilityAccess: Boolean,
     onGrantUsage: () -> Unit,
-    onGrantAccessibility: () -> Unit
+    onGrantAccessibility: () -> Unit,
+    onFinish: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(vertical = 12.dp),
-        verticalArrangement = Arrangement.Center
+            .padding(horizontal = 20.dp, vertical = 20.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
-            text = "FocusGuard needs\n2 permissions to work",
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 26.sp,
-                lineHeight = 32.sp
-            ),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "To track screen time accurately and intercept short-form content locally.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Card A: Usage Access
-        PermissionCard(
-            title = "Usage Access",
-            description = "See how much time you spend in each app today.",
-            isGranted = hasUsageAccess,
-            onGrantClick = onGrantUsage
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Card B: Accessibility Service
-        PermissionCard(
-            title = "Accessibility Service",
-            description = "Let FocusGuard detect and skip Reels/Shorts without deleting the apps.",
-            isGranted = hasAccessibilityAccess,
-            onGrantClick = onGrantAccessibility
-        )
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // Privacy Note
-        Card(
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            ),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "All data stays on your device. Nothing is uploaded. No internet permission required for tracking.",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        Column {
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                GuardyMascotHead(modifier = Modifier.size(56.dp), showHalo = false)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "Almost ready!",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
+                    )
+                    Text(
+                        text = "100% private & offline — everything stays on your phone.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted
+                    )
+                }
             }
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            Text(
+                text = "Your Name",
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = userName,
+                onValueChange = onNameChange,
+                placeholder = { Text("Enter your name (e.g. Aryan)", color = TextMuted) },
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = CardDark,
+                    unfocusedContainerColor = CardDark,
+                    focusedBorderColor = GuardGreen,
+                    unfocusedBorderColor = Color(0xFF232724),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            Text(
+                text = "Required Permissions",
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            PermissionSetupCard(
+                title = "Usage Access",
+                description = "Track your daily screen time and enforce app time limits.",
+                granted = hasUsageAccess,
+                onGrant = onGrantUsage
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            PermissionSetupCard(
+                title = "Accessibility Service",
+                description = "Instantly block distracting apps, YouTube Shorts, and Reels.",
+                granted = hasAccessibilityAccess,
+                onGrant = onGrantAccessibility
+            )
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        WhitePillButton(
+            text = if (hasUsageAccess) "Start Focusing" else "Continue to FocusGuard",
+            enabled = true,
+            onClick = onFinish
+        )
     }
 }
 
 @Composable
-fun PermissionCard(
+private fun PermissionSetupCard(
     title: String,
     description: String,
-    isGranted: Boolean,
-    onGrantClick: () -> Unit
+    granted: Boolean,
+    onGrant: () -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isGranted) ProgressGreen.copy(alpha = 0.12f)
-            else MaterialTheme.colorScheme.surface
-        ),
-        modifier = Modifier.fillMaxWidth()
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = CardDark,
+        border = BorderStroke(1.dp, if (granted) GuardGreen else Color(0xFF232724)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { if (!granted) onGrant() }
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    if (isGranted) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Granted",
-                            tint = ProgressGreen,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = Color.White
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = TextMuted
                 )
             }
-
             Spacer(modifier = Modifier.width(12.dp))
-
-            if (!isGranted) {
-                Button(
-                    onClick = onGrantClick,
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("Grant", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                }
+            if (granted) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "Granted",
+                    tint = GuardGreen,
+                    modifier = Modifier.size(28.dp)
+                )
             } else {
                 Surface(
-                    shape = CircleShape,
-                    color = ProgressGreen.copy(alpha = 0.2f),
-                    modifier = Modifier.size(32.dp)
+                    shape = RoundedCornerShape(50),
+                    color = GuardGreen
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = ProgressGreen,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    Text(
+                        text = "Allow",
+                        color = Color(0xFF0A1607),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                    )
                 }
             }
         }
@@ -463,146 +793,30 @@ fun PermissionCard(
 }
 
 @Composable
-fun OnboardingPersonalizationPage(
-    userName: String,
-    onNameChange: (String) -> Unit,
-    selectedUsage: String,
-    onUsageChange: (String) -> Unit,
-    selectedGoal: String,
-    onGoalChange: (String) -> Unit
+fun WhitePillButton(
+    text: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val scrollState = rememberScrollState()
-    val usageOptions = listOf("2-4 hrs", "4-6 hrs", "6-8 hrs", "8+ hrs")
-    val goalOptions = listOf(
-        "🛑 Quit Reels & Shorts Doomscrolling",
-        "🎯 Prepare for Exams & Studies",
-        "💼 Work Productivity & Deep Focus",
-        "🌙 Better Sleep & Mindful Living"
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(vertical = 12.dp),
-        horizontalAlignment = Alignment.Start
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(50),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color.White,
+            contentColor = Color(0xFF080A09),
+            disabledContainerColor = Color(0xFF2B2E2C),
+            disabledContentColor = Color(0xFF7D837F)
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(54.dp)
     ) {
         Text(
-            text = "Personalize Your\nFocus Journey",
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 26.sp,
-                lineHeight = 32.sp
-            ),
-            color = MaterialTheme.colorScheme.onSurface
+            text = text,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold
         )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = "🔒 100% Offline & Private. Saved strictly on device.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Name Field
-        Text(
-            text = "What should we call you?",
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = userName,
-            onValueChange = onNameChange,
-            placeholder = { Text("Enter your name or nickname...") },
-            leadingIcon = {
-                Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-            )
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Current Phone Usage
-        Text(
-            text = "Estimated daily screen time currently:",
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            usageOptions.forEach { option ->
-                val isSelected = selectedUsage == option
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onUsageChange(option) }
-                ) {
-                    Text(
-                        text = option,
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(vertical = 12.dp)
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Primary Goal
-        Text(
-            text = "Select your main target:",
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        goalOptions.forEach { goal ->
-            val isSelected = selectedGoal == goal
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-                ),
-                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-                    .clickable { onGoalChange(goal) }
-            ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = goal,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium),
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (isSelected) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            }
-        }
     }
 }

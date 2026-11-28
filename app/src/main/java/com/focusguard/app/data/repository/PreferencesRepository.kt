@@ -39,6 +39,17 @@ class PreferencesRepository(private val context: Context) {
         val SOUND_CHIME_ENABLED = booleanPreferencesKey("sound_chime_enabled")
         val POMODORO_WORK_MINUTES = intPreferencesKey("pomodoro_work_minutes")
         val POMODORO_BREAK_MINUTES = intPreferencesKey("pomodoro_break_minutes")
+
+        // v3.0 Onboarding, Profile, Groups & Active Session keys
+        val IS_PREPARING_EXAM = booleanPreferencesKey("is_preparing_exam")
+        val SELECTED_EXAM = stringPreferencesKey("selected_exam")
+        val STUDY_FREQUENCY = stringPreferencesKey("study_frequency")
+        val SCROLL_HABIT = stringPreferencesKey("scroll_habit")
+        val JOINED_GROUP_IDS_CSV = stringPreferencesKey("joined_group_ids_csv")
+        val CUSTOM_GROUPS_DATA = stringPreferencesKey("custom_groups_data")
+        val ACTIVE_SESSION_TAG = stringPreferencesKey("active_session_tag")
+        val ULTRA_FOCUS_ENABLED = booleanPreferencesKey("ultra_focus_enabled")
+        val JOINED_SINCE_LABEL = stringPreferencesKey("joined_since_label")
     }
 
     val hapticsEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -58,7 +69,7 @@ class PreferencesRepository(private val context: Context) {
     }
 
     val userName: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[Keys.USER_NAME] ?: "Friend"
+        prefs[Keys.USER_NAME] ?: "Aryan"
     }
 
     val currentUsageLevel: Flow<String> = context.dataStore.data.map { prefs ->
@@ -66,19 +77,56 @@ class PreferencesRepository(private val context: Context) {
     }
 
     val primaryGoal: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[Keys.PRIMARY_GOAL] ?: "Quit Doomscrolling (Reels & Shorts)"
+        prefs[Keys.PRIMARY_GOAL] ?: "Stay Focused on Studies"
+    }
+
+    val isPreparingExam: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.IS_PREPARING_EXAM] ?: true
+    }
+
+    val selectedExam: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SELECTED_EXAM] ?: "Class 12"
+    }
+
+    val studyFrequency: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.STUDY_FREQUENCY] ?: "Sometimes"
+    }
+
+    val scrollHabit: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SCROLL_HABIT] ?: "During study breaks"
+    }
+
+    val joinedSinceLabel: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.JOINED_SINCE_LABEL] ?: "Focusing since Nov, 2026"
+    }
+
+    val joinedGroupIds: Flow<Set<String>> = context.dataStore.data.map { prefs ->
+        val csv = prefs[Keys.JOINED_GROUP_IDS_CSV] ?: ""
+        if (csv.isBlank()) emptySet() else csv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+    }
+
+    val customGroupsRaw: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.CUSTOM_GROUPS_DATA] ?: ""
+    }
+
+    val activeSessionTag: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.ACTIVE_SESSION_TAG] ?: "Untagged"
+    }
+
+    val ultraFocusEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.ULTRA_FOCUS_ENABLED] ?: false
     }
 
     val totalTreesPlanted: Flow<Int> = context.dataStore.data.map { prefs ->
-        prefs[Keys.TOTAL_TREES_PLANTED] ?: 3
+        prefs[Keys.TOTAL_TREES_PLANTED] ?: 0
     }
 
     val totalMinutesSaved: Flow<Int> = context.dataStore.data.map { prefs ->
-        prefs[Keys.TOTAL_MINUTES_SAVED] ?: 180
+        prefs[Keys.TOTAL_MINUTES_SAVED] ?: 0
     }
 
     val strictUnlockType: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[Keys.STRICT_UNLOCK_TYPE] ?: "MATH" // "MATH", "PIN", "TIMER"
+        prefs[Keys.STRICT_UNLOCK_TYPE] ?: "MATH"
     }
 
     val strictPin: Flow<String> = context.dataStore.data.map { prefs ->
@@ -94,11 +142,11 @@ class PreferencesRepository(private val context: Context) {
     }
 
     val isPremium: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[Keys.IS_PREMIUM] ?: true  // Changed to true
+        prefs[Keys.IS_PREMIUM] ?: true
     }
 
     val dailyGoalMinutes: Flow<Int> = context.dataStore.data.map { prefs ->
-        prefs[Keys.DAILY_GOAL_MINUTES] ?: 300 // default 5 hours
+        prefs[Keys.DAILY_GOAL_MINUTES] ?: 240 // 4h default matching screenshot
     }
 
     val isStrictModeEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -209,6 +257,69 @@ class PreferencesRepository(private val context: Context) {
             prefs[Keys.PRIMARY_GOAL] = goal
             prefs[Keys.DAILY_GOAL_MINUTES] = dailyGoalMinutes
         }
+    }
+
+    suspend fun setOnboardingQuizProfile(
+        name: String,
+        isPreparingExam: Boolean,
+        selectedExam: String,
+        studyFrequency: String,
+        scrollHabit: String,
+        dailyGoalMinutes: Int
+    ) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.USER_NAME] = name.ifBlank { "Aryan" }
+            prefs[Keys.IS_PREPARING_EXAM] = isPreparingExam
+            prefs[Keys.SELECTED_EXAM] = selectedExam
+            prefs[Keys.STUDY_FREQUENCY] = studyFrequency
+            prefs[Keys.SCROLL_HABIT] = scrollHabit
+            prefs[Keys.PRIMARY_GOAL] = if (isPreparingExam && selectedExam.isNotBlank()) {
+                "Ace $selectedExam & Quit Scrolling"
+            } else {
+                "Deep Focus & Quit Scrolling"
+            }
+            prefs[Keys.DAILY_GOAL_MINUTES] = dailyGoalMinutes
+        }
+    }
+
+    suspend fun toggleJoinedGroup(groupId: String) {
+        context.dataStore.edit { prefs ->
+            val current = (prefs[Keys.JOINED_GROUP_IDS_CSV] ?: "")
+                .split(",")
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .toMutableSet()
+            if (current.contains(groupId)) {
+                current.remove(groupId)
+            } else {
+                current.add(groupId)
+            }
+            prefs[Keys.JOINED_GROUP_IDS_CSV] = current.joinToString(",")
+        }
+    }
+
+    suspend fun addCustomGroup(id: String, name: String, topic: String) {
+        context.dataStore.edit { prefs ->
+            val existing = prefs[Keys.CUSTOM_GROUPS_DATA] ?: ""
+            val safeName = name.replace("|", " ").replace(";", " ").trim()
+            val safeTopic = topic.replace("|", " ").replace(";", " ").trim()
+            val entry = "$id|$safeName|$safeTopic"
+            val updated = if (existing.isBlank()) entry else "$existing;$entry"
+            prefs[Keys.CUSTOM_GROUPS_DATA] = updated
+
+            val currentJoined = (prefs[Keys.JOINED_GROUP_IDS_CSV] ?: "")
+                .split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableSet()
+            currentJoined.add(id)
+            prefs[Keys.JOINED_GROUP_IDS_CSV] = currentJoined.joinToString(",")
+        }
+    }
+
+    suspend fun setActiveSessionTag(tag: String) {
+        context.dataStore.edit { it[Keys.ACTIVE_SESSION_TAG] = tag }
+    }
+
+    suspend fun setUltraFocusEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.ULTRA_FOCUS_ENABLED] = enabled }
     }
 
     suspend fun incrementTreesPlanted() {

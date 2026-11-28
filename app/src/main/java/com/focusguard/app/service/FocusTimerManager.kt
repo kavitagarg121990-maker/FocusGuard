@@ -11,13 +11,15 @@ import kotlinx.coroutines.flow.update
 data class FocusTimerState(
     val isRunning: Boolean = false,
     val isPaused: Boolean = false,
-    val mode: FocusTimerMode = FocusTimerMode.STOPWATCH,
-    val stopwatchSeconds: Int = 151, // Initial 02:31
+    val mode: FocusTimerMode = FocusTimerMode.TIMER,
+    val stopwatchSeconds: Int = 0,
     val secondsRemaining: Int = 25 * 60,
     val totalPhaseDurationSeconds: Int = 25 * 60,
-    val remainingPauses: Int = 2,
-    val focusMinutesBankedToday: Int = 94,
-    val dailyGoalMinutes: Int = 120
+    val remainingPauses: Int = 5,
+    val focusMinutesBankedToday: Int = 0,
+    val dailyGoalMinutes: Int = 240,
+    val activeTag: String = "Untagged",
+    val isUltraFocus: Boolean = false
 ) {
     val formattedTime: String
         get() {
@@ -30,7 +32,6 @@ data class FocusTimerState(
     val progressFraction: Float
         get() {
             return if (mode == FocusTimerMode.STOPWATCH) {
-                // Circular ring sweeps up smoothly every 60s
                 (stopwatchSeconds % 60) / 60f
             } else {
                 if (totalPhaseDurationSeconds > 0) {
@@ -46,21 +47,30 @@ object FocusTimerManager {
     private val _timerState = MutableStateFlow(FocusTimerState())
     val timerState: StateFlow<FocusTimerState> = _timerState.asStateFlow()
 
-    fun start(context: Context, mode: FocusTimerMode = _timerState.value.mode, durationSeconds: Int = _timerState.value.totalPhaseDurationSeconds) {
+    fun start(
+        context: Context,
+        mode: FocusTimerMode = _timerState.value.mode,
+        durationSeconds: Int = _timerState.value.totalPhaseDurationSeconds,
+        tag: String = _timerState.value.activeTag,
+        ultraFocus: Boolean = _timerState.value.isUltraFocus
+    ) {
+        val safeDuration = if (mode == FocusTimerMode.STOPWATCH) 0 else durationSeconds.coerceAtLeast(60)
         _timerState.update {
             it.copy(
                 isRunning = true,
                 isPaused = false,
                 mode = mode,
-                totalPhaseDurationSeconds = durationSeconds,
-                secondsRemaining = durationSeconds,
-                stopwatchSeconds = if (mode == FocusTimerMode.STOPWATCH) it.stopwatchSeconds else 0
+                totalPhaseDurationSeconds = safeDuration,
+                secondsRemaining = safeDuration,
+                stopwatchSeconds = 0,
+                activeTag = tag,
+                isUltraFocus = ultraFocus
             )
         }
         val intent = Intent(context, FocusTimerService::class.java).apply {
             action = FocusTimerService.ACTION_START
             putExtra(FocusTimerService.EXTRA_MODE, mode.name)
-            putExtra(FocusTimerService.EXTRA_DURATION_SECONDS, durationSeconds)
+            putExtra(FocusTimerService.EXTRA_DURATION_SECONDS, safeDuration)
         }
         try {
             context.startForegroundService(intent)
@@ -70,7 +80,7 @@ object FocusTimerManager {
     }
 
     fun pause(context: Context) {
-        if (!_timerState.value.isRunning || _timerState.value.remainingPauses <= 0) return
+        if (!_timerState.value.isRunning) return
         _timerState.update {
             it.copy(
                 isPaused = true,
@@ -133,7 +143,7 @@ object FocusTimerManager {
                 isPaused = false,
                 stopwatchSeconds = 0,
                 secondsRemaining = it.totalPhaseDurationSeconds,
-                remainingPauses = 2,
+                remainingPauses = 5,
                 focusMinutesBankedToday = it.focusMinutesBankedToday + bankedMinutes
             )
         }
@@ -155,6 +165,14 @@ object FocusTimerManager {
                 stopwatchSeconds = 0
             )
         }
+    }
+
+    fun setActiveTag(tag: String) {
+        _timerState.update { it.copy(activeTag = tag) }
+    }
+
+    fun setUltraFocus(enabled: Boolean) {
+        _timerState.update { it.copy(isUltraFocus = enabled) }
     }
 
     fun setDailyGoal(minutes: Int) {

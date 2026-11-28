@@ -35,26 +35,26 @@ jobs:
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FocusGuard-v2.3-release
+          name: FocusGuard-v3.0-release
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
       - name: Copy APK for GitHub Release
-        run: cp app/build/outputs/apk/release/app-release.apk FocusGuard-v2.3-release.apk
+        run: cp app/build/outputs/apk/release/app-release.apk FocusGuard-v3.0-release.apk
 
-      - name: Publish GitHub Release v2.3
+      - name: Publish GitHub Release v3.0.0
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v2.3.0 --yes || true
-          gh release create v2.3.0 FocusGuard-v2.3-release.apk \
-            --title "FocusGuard v2.3.0 (Official Signed Production Release)" \
-            --notes "Official Production Release of FocusGuard v2.3.0:
-            - ⚡ Instant 0ms App Blocking: Individual apps blocked immediately via real-time Accessibility interception
-            - 🔔 Live Background Focus Timer & Notification: Persistent timer with Pause, +5m, and Finish controls that keeps ticking even when screen is locked or app is closed
-            - 🔒 Official Release Keystore Signed: v1+v2+v3 signature scheme, debuggable = false, production Play Protect standard
-            - ✏️ Editable Daily Goal: Tap the pencil icon directly on the goal card to customize daily hours and minutes
-            - ⏱️ Editable Timer Modes: Switch easily between Stopwatch and custom Pomodoro sprints (15m, 25m, 45m, 60m)
-            - 🩺 Permissions Doctor in Settings: Real-time status chips and 1-tap grant buttons for Accessibility, Usage Stats, Overlay, Notifications, and Battery Whitelist
-            - 🖤 100% OLED Deep Black Theme: AMOLED blacks across all screens with glowing neon emerald styling and zero navigation bar overflow
-            - 📴 100% Certified Private & Offline: Zero internet permission, all records stored securely on-device in SQLite"
+          gh release delete v3.0.0 --yes || true
+          gh release create v3.0.0 FocusGuard-v3.0-release.apk \
+            --title "FocusGuard v3.0.0 (Mascot Companion & AMOLED UI)" \
+            --notes "FocusGuard v3.0.0 Major UI & Experience Upgrade:
+            - Guardy Mascot Onboarding: Interactive study & exam survey + dotted mountain climb & shield animations
+            - AMOLED Focus Dashboard: Circular goal gauge, multi-color Screen Time bar, Upcoming schedule, and floating Start Focus Timer pill
+            - Start Focus Timer Sheet: Timer, Stopwatch & Pomodoro modes, customizable focus/break times, Blocked Apps & Ultra Focus toggle
+            - Aurora Night Active Session: Immersive fullscreen northern lights countdown with tags, ambient audio, Guardy companion, and strict lock
+            - 3+1 Floating Pill Navigation: Focus | Schedule | Groups + detached Blocks tab
+            - Focus Schedules & Offline Groups: Quick schedule templates, custom schedules, and local study accountability rooms
+            - Profile & Achievements: Hexagonal focus badges, total time overview, and weekly reports
+            - 100% Offline & Official Keystore Signed: Zero internet permission, all Pro features unlocked free."
